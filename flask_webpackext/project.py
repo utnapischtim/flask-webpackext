@@ -14,9 +14,38 @@ from os.path import join
 
 from flask import current_app
 from flask.helpers import get_root_path
+from pynpm import NPMPackage
 from pywebpack import WebpackBundleProject as PyWebpackBundleProject
 from pywebpack import WebpackTemplateProject as PyWebpackTemplateProject
+from pywebpack.helpers import cached
 from werkzeug.utils import import_string
+
+
+class PNPMPackage(NPMPackage):
+    """Change to pnpm."""
+
+    def __init__(self, filepath, npm_bin="pnpm", commands=None, shell=False):
+        """Construct."""
+        super().__init__(
+            filepath=filepath, npm_bin=npm_bin, commands=commands, shell=shell
+        )
+
+    def _run_npm(self, command, *args, **kwargs):
+        """Run an NPM command.
+
+        By default the call is blocking until NPM is finished and output
+        is directed to stdout. If ``wait=False`` is passed to the method,
+        you get a handle to the process (return value of ``subprocess.Popen``).
+
+        :param command: NPM command to run.
+        :param args: List of arguments.
+        :param wait: Wait for NPM command to finish. By defaul
+        """
+        print(f"PNPMPackage._run_npm args: {args}, command: {command}")
+        if command == "install":
+            args = ["--shamefully-hoist"]
+
+        return super()._run_npm(command, *args, **kwargs)
 
 
 class _PathStorageMixin:
@@ -88,6 +117,12 @@ class _PathStorageMixin(object):
         if isinstance(project, str):
             return import_string(project)
         return project
+
+    @property
+    @cached
+    def npmpkg(self):
+        """Get API to NPM package."""
+        return PNPMPackage(self.path)
 
 
 class WebpackTemplateProject(_PathStorageMixin, PyWebpackTemplateProject):
