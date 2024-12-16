@@ -41,7 +41,6 @@ class PNPMPackage(NPMPackage):
         :param args: List of arguments.
         :param wait: Wait for NPM command to finish. By defaul
         """
-        print(f"PNPMPackage._run_npm args: {args}, command: {command}")
         if command == "install":
             args = ["--shamefully-hoist"]
 
@@ -54,7 +53,31 @@ class _PathStorageMixin:
     @property
     def path(self):
         """Get path to project."""
-        return self.app.config["WEBPACKEXT_PROJECT_BUILDDIR"]
+        try:
+            return self.app.config["WEBPACKEXT_PROJECT_BUILDDIR"]
+        except KeyError:
+            return join(self.app.instance_path, "assets")
+
+    @property
+    def dist_dir(self):
+        """Get dist dir."""
+        try:
+            return self.app.config["WEBPACKEXT_PROJECT_DISTDIR"]
+        except KeyError:
+            return join(self.app.static_folder, "dist")
+
+    @property
+    def project(self):
+        project = self.app.config["WEBPACKEXT_PROJECT"]
+        if isinstance(project, str):
+            return import_string(project)
+        return project
+
+    @property
+    @cached
+    def npmpkg(self):
+        """Get API to NPM package."""
+        return PNPMPackage(self.path)
 
     @property
     def storage_cls(self):
@@ -97,32 +120,14 @@ class _PathStorageMixin:
             }
         }
 
-
-def flask_allowed_copy_paths():
-    """Get the allowed copy paths from the Flask application."""
-    return [
-        current_app.instance_path,
-        current_webpack.project.path,
-        current_app.static_folder,
-        current_app.config["WEBPACKEXT_PROJECT_DISTDIR"],
-    ]
-
-
-class _PathStorageMixin(object):
-    """Mixin class."""
-
-    @property
-    def project(self):
-        project = self.app.config["WEBPACKEXT_PROJECT"]
-        if isinstance(project, str):
-            return import_string(project)
-        return project
-
-    @property
-    @cached
-    def npmpkg(self):
-        """Get API to NPM package."""
-        return PNPMPackage(self.path)
+    def flask_allowed_copy_paths(self):
+        """Get the allowed copy paths from the Flask application."""
+        return [
+            self.app.instance_path,
+            self.path,
+            self.app.static_folder,
+            self.dist_dir,
+        ]
 
 
 class WebpackTemplateProject(_PathStorageMixin, PyWebpackTemplateProject):
@@ -196,11 +201,12 @@ class WebpackBundleProject(_PathStorageMixin, PyWebpackBundleProject):
         self.app = app or current_app
         project_template_dir = join(get_root_path(import_name), project_folder)
         config = config or self.flask_config
+        allowed_copy_paths = allowed_copy_paths or self.flask_allowed_copy_paths()
         super().__init__(
             None,
             project_template_dir=project_template_dir,
             bundles=bundles,
             config=config,
             config_path=config_path,
-            allowed_copy_paths=allowed_copy_paths or flask_allowed_copy_paths,
+            allowed_copy_paths=allowed_copy_paths,
         )
