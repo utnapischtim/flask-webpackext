@@ -2,7 +2,7 @@
 #
 # This file is part of Flask-WebpackExt
 # Copyright (C) 2017, 2018 CERN.
-# Copyright (C) 2024 Graz University of Technology.
+# Copyright (C) 2024-2025 Graz University of Technology.
 #
 # Flask-WebpackExt is free software; you can redistribute it and/or modify
 # it under the terms of the Revised BSD License; see LICENSE file for
@@ -77,7 +77,18 @@ class _PathStorageMixin:
     @cached
     def npmpkg(self):
         """Get API to NPM package."""
-        return PNPMPackage(self.path)
+        js_packages_manager = self.app.config.get("JAVASCRIPT_PACKAGES_MANAGER", "npm")
+        if js_packages_manager == "pnpm":
+            return PNPMPackage(self.path)
+
+        return NPMPackage(self.path)
+
+    def run(self, script_name, *args):
+        """Override run."""
+        assets_builder = self.app.config.get("ASSETS_BUILDER", "webpack")
+        if assets_builder == "rspack":
+            script_name += "-rspack"
+        return super().run(script_name, *args)
 
     @property
     def storage_cls(self):
