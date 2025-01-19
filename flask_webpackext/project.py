@@ -212,7 +212,7 @@ class WebpackBundleProject(_PathStorageMixin, PyWebpackBundleProject):
         self.app = app or current_app
         project_template_dir = join(get_root_path(import_name), project_folder)
         config = config or self.flask_config
-        allowed_copy_paths = allowed_copy_paths or self.flask_allowed_copy_paths()
+        allowed_copy_paths = allowed_copy_paths or self.flask_allowed_copy_paths
         super().__init__(
             None,
             project_template_dir=project_template_dir,
