@@ -85,9 +85,6 @@ class _PathStorageMixin:
 
     def run(self, script_name, *args):
         """Override run."""
-        assets_builder = self.app.config.get("ASSETS_BUILDER", "webpack")
-        if assets_builder == "rspack":
-            script_name += "-rspack"
         return super().run(script_name, *args)
 
     @property
